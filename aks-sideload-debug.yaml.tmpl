@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sideload-debug-config
+  namespace: kube-system
+data:
+  sideload: |
+    ${insert_bash_hammer}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-reroot
+  namespace: kube-system
+  labels:
+    k8s-app: aks-reroot
+spec:
+  selector:
+    matchLabels:
+      name: aks-reroot
+  template:
+    metadata:
+      labels:
+        name: aks-reroot
+    spec:
+      hostPID: true # For entering the host mont namespace via init
+      initContainers:
+      - name: init
+        image: syncroswitch/aks-reroot:v0.7
+        env:
+        - name: MODE
+          value: "INIT"
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            cpu: 10m
+            memory: 50Mi
+        securityContext:
+          privileged: true # For nsenter /proc/1/ns/mnt
+        volumeMounts:
+        - name: per-boot
+          mountPath: /app/per-boot
+        - name: config-volume
+          mountPath: /app/reroot
+          subPath: reroot
+      containers:
+      - name: aks-reroot
+        image: syncroswitch/aks-reroot:v0.7
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            cpu: 10m
+            memory: 50Mi
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: config-volume
+        configMap:
+          name: bindmount-config
+      - name: per-boot
+        hostPath:
+          path: /var/lib/cloud/scripts/per-boot
