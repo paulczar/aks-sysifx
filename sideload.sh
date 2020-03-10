@@ -113,6 +113,17 @@ in_bcc () {
     echo "export PATH=$PATH:/usr/share/bcc/tools/" >> ~/.bashrc
 }
 
+deb_bcc () {
+    # Compiling bcc from source takes awhile - the bugs in upstream may or may
+    # not impact the results of all tests, so defaulting to packages.
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
+    echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
+    sudo apt-get update
+    sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
+    echo "export PATH=$PATH:/usr/share/bcc/tools/" >> ~/.bashrc
+}
+
+
 in_bpftrace () {
     if chk $force '/usr/local/bin/bpftrace'; then
         return
@@ -231,21 +242,25 @@ error_exit () {
 }
 
 main () {
-    bcctools='true'
+    bcc_source=0
     force=0
     #remount=''
     #npd=''
 
     while getopts 'bf' flag; do
         case "${flag}" in
-            b) bcctools='true' ;;
+            b) bcc_source=1 ;;
             f) force=1;;
             *) print_usage
             exit 1 ;;
         esac
     done
     mkdir -p ${TMPD}
-    in_bcc || error_exit "Failed to install bcc"
+    if [ $bcc_source -eq 1 ]; then
+        in_bcc || error_exit "Failed to install bcc"
+    else
+        deb_bcc || error_exit "Failed to install bcc from apt"
+    fi
     in_bpftrace || error_exit "Failed to install bpftrace"
     in_bpfexporter || error_exit "Failed to install bpf exporter"
 
