@@ -232,6 +232,19 @@ bindmounts () {
     return 0
 }
 
+apply_host_tuning () {
+    # Apply specific changes to the Linux host to improve performance and
+    # reliability under operational load.
+
+    # Tunings applied:
+    # - Use noop scheduler (https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers)
+    #  - the noop scheduler delegates all storage scheduling to the underlying
+    #    storage devices.
+    # - sysctl changes:
+    #   - set panic on oom / reboot on panic
+    return 0
+}
+
 print_usage () {
     printf "Usage: sideload.sh [-f][-b]"
 }
@@ -244,6 +257,7 @@ error_exit () {
 main () {
     bcc_source=0
     force=0
+    tune=0
     #remount=''
     #npd=''
 
@@ -251,6 +265,7 @@ main () {
         case "${flag}" in
             b) bcc_source=1 ;;
             f) force=1;;
+            t) tune=1;;
             *) print_usage
             exit 1 ;;
         esac
@@ -263,6 +278,11 @@ main () {
     fi
     in_bpftrace || error_exit "Failed to install bpftrace"
     in_bpfexporter || error_exit "Failed to install bpf exporter"
+
+    if [ $tune -eq 1 ]; then
+        # Stub for system tunings to apply
+        apply_host_tuning || "Failed to apply host tunables"
+    fi
 
 }
 
