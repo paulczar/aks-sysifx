@@ -1,0 +1,3 @@
+[submodule "monitoring/platform-operations-on-kubernetes"]
+	path = monitoring/platform-operations-on-kubernetes
+	url = git@github.com:paulczar/platform-operations-on-kubernetes.git

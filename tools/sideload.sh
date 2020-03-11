@@ -6,6 +6,7 @@ set -o pipefail  # dont hide errors within pipes
 TMPD='/tmp/debug-sideload'
 
 force=0
+EBPFSF=https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/ebpf_exporter.service
 
 exists () {
     if [[ -e $1 ]]; then
@@ -161,7 +162,8 @@ in_bpfexporter () {
         make
         mv release/ebpf_exporter-*/ebpf_exporter /usr/local/bin
 
-        wget -c https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/ebpf_exporter.service
+        wget -c $EBPFSF
+        wget -c
         mv ebpf_exporter.service /etc/systemd/system/ebpf_exporter.service
         mkdir -p /etc/ebpf_exporter
 
@@ -245,6 +247,13 @@ apply_host_tuning () {
     return 0
 }
 
+node_exporter () {
+    pkgs='prometheus-node-exporter'
+    if ! dpkg -s $pkgs >/dev/null 2>&1; then
+        sudo apt-get install $pkgs
+    fi
+}
+
 print_usage () {
     printf "Usage: sideload.sh [-f][-b]"
 }
@@ -271,6 +280,8 @@ main () {
         esac
     done
     mkdir -p ${TMPD}
+    # Node exporter was missing.
+    node_exporter || error_exit "Failed to install node_exporter"
     if [ $bcc_source -eq 1 ]; then
         in_bcc || error_exit "Failed to install bcc"
     else
