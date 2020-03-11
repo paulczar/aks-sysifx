@@ -1,9 +1,0 @@
-[Unit]
-Description=Force panic on OOM
-
-[Service]
-Type=simple
-ExecStart=/usr/sbin/panic-on-oom-watcher
-
-[Install]
-WantedBy=multi-user.target
