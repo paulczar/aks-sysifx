@@ -28,9 +28,27 @@ harbor:
 
 grafana:
   enabled: true
+  repository:
+    name: stable
+    url: https://kubernetes-charts.storage.googleapis.com
+  name: grafana
+  namespace: metrics
+  chart: stable/grafana
+  version: 4.4.0
+  values:
+    - grafana-values.yaml.gotmpl
 
 prometheus:
   enabled: true
+  repository:
+    name: stable
+    url: https://kubernetes-charts.storage.googleapis.com
+  name: prometheus
+  namespace: metrics
+  chart: stable/prometheus
+  version: 8.11.4
+  values:
+    - values/prometheus/values.yaml.gotmpl
 
 loki:
   enabled: false

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # name of environment
-export ENV_NAME=default
+export ENV_NAME=monitoring
 
 export ENV_DIR="./monitoring/"
 
