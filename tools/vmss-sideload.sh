@@ -12,7 +12,7 @@ fi
 resource_group=$1
 cluster_name=$2
 
-scrurl="https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/sideload.sh"
+scrurl="https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/tools/sideload.sh"
 cmd="\"curl ${scrurl} | sudo bash\""
 
 nrg=$(az aks show --resource-group ${resource_group} --name ${cluster_name} --query nodeResourceGroup -o tsv)
@@ -21,10 +21,9 @@ nodes=$(az vmss list-instances -n ${scaleset} --resource-group ${nrg} --query []
 node_ids=$(az vmss list-instances -n ${scaleset} --resource-group ${nrg} --query [].instanceId -o tsv)
 
 while read line
-do 
+do
   node=$line
   az vmss run-command invoke -g "${nrg}" -n "${scaleset}" --instance "${line}" \
     --command-id RunShellScript -o json --scripts @sideload.sh | jq -r '.value[].message' &
 done <<< ${node_ids}
 wait
-

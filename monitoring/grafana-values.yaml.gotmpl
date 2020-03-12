@@ -21,36 +21,39 @@ dashboards:
     k8s-resources-pod.json:
       file: dashboards/k8s-resources-pod.json
       datasource: {{ env "ENV_NAME" }}-prometheus
-  k8s-resources-workload.json:
-    file: dashboards/k8s-resources-workload.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  k8s-resources-workloads-namespace.json:
-    file: dashboards/k8s-resources-workloads-namespace.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  kubelet.json:
-    file: dashboards/kubelet.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  namespace-by-pod.json:
-    file: dashboards/namespace-by-pod.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  namespace-by-workload.json:
-    file: dashboards/namespace-by-workload.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  namespace-by-workload.json:
-    file: dashboards/persistentvolumesusage.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  pod-total.json:
-    file: dashboards/pod-total.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  proxy.json:
-    file: dashboards/proxy.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  scheduler.json:
-    file: dashboards/scheduler.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  statefulset.json:
-    file: dashboards/statefulset.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
-  workload-total.json:
-    file: dashboards/workload-total.json
-    datasource: {{ env "ENV_NAME" }}-prometheus
+    k8s-resources-workload.json:
+      file: dashboards/k8s-resources-workload.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    k8s-resources-workloads-namespace.json:
+      file: dashboards/k8s-resources-workloads-namespace.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    kubelet.json:
+      file: dashboards/kubelet.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    namespace-by-pod.json:
+      file: dashboards/namespace-by-pod.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    namespace-by-workload.json:
+      file: dashboards/namespace-by-workload.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    namespace-by-workload.json:
+      file: dashboards/persistentvolumesusage.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    pod-total.json:
+      file: dashboards/pod-total.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    proxy.json:
+      file: dashboards/proxy.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    scheduler.json:
+      file: dashboards/scheduler.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    statefulset.json:
+      file: dashboards/statefulset.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    workload-total.json:
+      file: dashboards/workload-total.json
+      datasource: {{ env "ENV_NAME" }}-prometheus
+    io-histogram.json:
+      file: dashboards/io-histogram-bpf.json
+      datasource: {{ env "ENV_NAME" }}-prometheus

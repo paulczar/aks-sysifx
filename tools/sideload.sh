@@ -244,6 +244,11 @@ apply_host_tuning () {
     #    storage devices.
     # - sysctl changes:
     #   - set panic on oom / reboot on panic
+    # /sys/block/sd*/queue/read_ahead_kb = 4096
+    # /sys/block/sd*/queue/max_sectors_kb = 128
+    # /sys/block/sd*/queue/scheduler = mq-deadline
+    # /sys/block/sd[c-z]/device/queue_depth = 64
+
     return 0
 }
 
