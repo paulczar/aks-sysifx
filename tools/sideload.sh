@@ -291,7 +291,7 @@ error_exit () {
 }
 
 main () {
-    echo $?
+
     bcc_source=0
     force=0
     tune=0
@@ -331,8 +331,7 @@ main () {
             shift
         fi
     done
-    echo $force
-    exit
+
     if [ -e ${TMPD} ]; then
         rm -rf ${TMPD}
     fi
