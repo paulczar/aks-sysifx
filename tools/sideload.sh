@@ -201,6 +201,7 @@ in_bpfexporter () {
         mv bio.yaml /etc/ebpf_exporter/config.yaml
         systemctl daemon-reload
         systemctl start ebpf_exporter
+        systemctl status ebpf_exporter.service
     )
     rm -rf ebpf_exporter
 }
