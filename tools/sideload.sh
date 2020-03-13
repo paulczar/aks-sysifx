@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-set -o errexit   # abort on nonzero exitstatus
-set -o nounset   # abort on unbound variable
-set -o pipefail  # dont hide errors within pipes
+#
+# Do not attempt this valid bash script to the vmss run_command ala:
+# az vmss run-command invoke -g "${nrg}" -n "${scaleset}" --instance "${line}" \
+#     --command-id RunShellScript -o json --scripts @tools/sideload.sh \
+#     --parameters "force exonly" | jq -r '.value[].message' &
+#
+# The az cli and walinux agent both do string interpolation and the script is
+# executed (via eval), using valid bash does not work with command line
+# arguments either. Or bash arrays.
+#
+# https://github.com/Azure/azure-cli/issues/10400
+
+# set -o errexit   # abort on nonzero exitstatus
+# set -o nounset   # abort on unbound variable
+# set -o pipefail  # dont hide errors within pipes
 
 TMPD='/tmp/debug-sideload'
-
+DISTRO=$(lsb_release -cs)
+LLVM_VERSION="8"
+bcc_ref="v0.12.0"
 force=0
-EBPFSF=https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/ebpf_exporter.service
 
 exists () {
     if [[ -e $1 ]]; then
@@ -18,44 +31,14 @@ exists () {
 chk () {
     force=$1
     fname=$2
-    if [ $force -eq 1 ] || ! [ -e $fname ]; then
+    if [ "$force" -eq 1 ] || ! [ -e "$fname" ]; then
         return 1
     fi
     return 0
 }
 
-in_bcc () {
-    if chk $force '/usr/local/include/bcc'; then
-        return
-    fi
-    ###############################################################################
-    # Install the IOVisor BCC tools suite
-    # https://iovisor.github.io/bcc/
-    #
-    # Build from source to avoid bugs patched in the main source repository
-    # the current deb files are out of date.
-
-    # Thanks to @alexeldeib for letting me steal his:
-    # https://github.com/alexeldeib/bpftrace-static/blob/master/Dockerfile
-    #
-    # Note compiling BCC from source takes awhile. Uncomment to use RPMs instead
-    # FORCE_BCC_RPM=
-    #
-    # All bcc tools land in /usr/share/bcc/*
-
-    echo "installing bcc..."
-
-    # Add llvm repositories (LLVM is a requirement for BCC)
-    DISTRO=$(lsb_release -cs)
-    LLVM_VERSION="8"
-    bcc_ref="v0.12.0"
-    echo "deb http://apt.llvm.org/${DISTRO}/ llvm-toolchain-$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/llvm.list
-    echo "deb-src http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-    echo "deb http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-    echo "deb-src http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-    curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-    apt-get update && apt-get install -y curl gnupg
-
+apt_base_install () {
+    echo "============   installing base dependencies"
     apt-get update && apt-get install -y \
         bison \
         binutils-dev \
@@ -83,25 +66,45 @@ in_bcc () {
         luajit-5.1-dev \
         apt-transport-https \
         libssl-dev
+}
 
-    cd ${TMPD}
+in_bcc () {
+    if chk "$force" '/usr/local/include/bcc'; then
+        return
+    fi
+    ###############################################################################
+    # Install the IOVisor BCC tools suite
+    # https://iovisor.github.io/bcc/
+    #
+    # Build from source to avoid bugs patched in the main source repository
+    # the current deb files are out of date.
 
-    build=2
-    version=3.16
-    curl -OL https://cmake.org/files/v$version/cmake-$version.$build.tar.gz
-    tar -xzvf cmake-$version.$build.tar.gz
-    (
-        cd cmake-$version.$build/
-        ./bootstrap
-        make -j$(nproc)
-        make install
-    )
-    rm -rf cmake-$version.$build*
+    # Thanks to @alexeldeib for letting me steal his:
+    # https://github.com/alexeldeib/bpftrace-static/blob/master/Dockerfile
+    #
+    # Note compiling BCC from source takes awhile. Uncomment to use RPMs instead
+    # FORCE_BCC_RPM=
+    #
+    # All bcc tools land in /usr/share/bcc/*
+
+    echo "============   installing bpf exporter"
+
+    echo "deb http://apt.llvm.org/${DISTRO}/ llvm-toolchain-$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb-src http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    echo "deb-src http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+    curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+    apt-get update && apt-get install -y curl gnupg
+
+    apt_base_install
+
+
+    cd ${TMPD} || exit
 
     git clone https://github.com/iovisor/bcc.git
     mkdir bcc/build
     (
-        cd bcc/build
+        cd bcc/build || exit
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
         make
         make install
@@ -111,30 +114,53 @@ in_bcc () {
         cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a
     )
     rm -rf bcc
-    echo "export PATH=$PATH:/usr/share/bcc/tools/" >> ~/.bashrc
+    echo "export PATH=$PATH:/usr/share/bcc/tools/" >> /root/.bashrc
+}
+
+compile_cmake () {
+    echo "============   installing cmake"
+    if chk "$force" '/usr/local/bin/cmake'; then
+        return
+    fi
+    cd ${TMPD} || exit
+    apt_base_install
+    build=2
+    version=3.16
+    curl -OL https://cmake.org/files/v$version/cmake-$version.$build.tar.gz
+    tar -xzvf cmake-$version.$build.tar.gz
+    (
+        cd cmake-$version.$build/ || exit
+        ./bootstrap
+        make -j$(nproc)
+        make install
+    )
+    rm -rf cmake-$version.$build*
+
 }
 
 deb_bcc () {
+    echo "============   installing bcc from deb"
     # Compiling bcc from source takes awhile - the bugs in upstream may or may
     # not impact the results of all tests, so defaulting to packages.
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
     echo "deb https://repo.iovisor.org/apt/$(lsb_release -cs) $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/iovisor.list
     sudo apt-get update
     sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
-    echo "export PATH=$PATH:/usr/share/bcc/tools/" >> ~/.bashrc
+    echo "export PATH=$PATH:/usr/share/bcc/tools/" >> /root/.bashrc
 }
 
 
 in_bpftrace () {
-    if chk $force '/usr/local/bin/bpftrace'; then
+    if chk "$force" '/usr/local/bin/bpftrace'; then
         return
     fi
-    cd ${TMPD}
+    echo "============   installing bpftrace"
+    cd ${TMPD} || exit
 
     git clone https://github.com/iovisor/bpftrace.git
     mkdir bpftrace/build
     (
-        cd bpftrace/build
+        cd bpftrace/build || exit
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
             -DWARNINGS_AS_ERRORS:BOOL=OFF \
             -DSTATIC_LINKING:BOOL=ON -DSTATIC_LIBC:BOOL=OFF \
@@ -152,18 +178,18 @@ in_bpftrace () {
 }
 
 in_bpfexporter () {
-    if chk $force '/usr/local/bin/ebpf_exporter'; then
+    if chk "$force" '/usr/local/bin/ebpf_exporter'; then
         return
     fi
-    cd ${TMPD}
+    echo "============   installing bpf exporter"
+    cd ${TMPD} || exit
     git clone https://github.com/cloudflare/ebpf_exporter.git
     (
-        cd ebpf_exporter
-        make
+        cd ebpf_exporter || exit
+        make release-binaries
         mv release/ebpf_exporter-*/ebpf_exporter /usr/local/bin
 
-        wget -c $EBPFSF
-        wget -c
+        wget -c https://raw.githubusercontent.com/jnoller/k8s-io-debug/master/tools/ebpf_exporter.service
         mv ebpf_exporter.service /etc/systemd/system/ebpf_exporter.service
         mkdir -p /etc/ebpf_exporter
 
@@ -252,54 +278,89 @@ apply_host_tuning () {
     return 0
 }
 
-node_exporter () {
-    pkgs='prometheus-node-exporter'
-    if ! dpkg -s $pkgs >/dev/null 2>&1; then
-        sudo apt-get install $pkgs
-    fi
-}
-
 print_usage () {
     printf "Usage: sideload.sh [-f][-b]"
 }
 
 error_exit () {
+    if [ "$force" -eq 1 ]; then
+        return
+    fi
     echo "$1" 1>&2
     exit 1
 }
 
 main () {
+    echo $?
     bcc_source=0
     force=0
     tune=0
-    #remount=''
-    #npd=''
+    exonly=0
+    remount=0
+    npd=0
+    options=()
+    eoo=0
 
-    while getopts 'bf' flag; do
-        case "${flag}" in
-            b) bcc_source=1 ;;
-            f) force=1;;
-            t) tune=1;;
-            *) print_usage
-            exit 1 ;;
-        esac
+    while [[ $1 ]]; do
+        if ! ((eoo)); then
+            case "$1" in
+                force)
+                    force=1
+                    shift
+                    ;;
+                source)
+                    bcc_source=1
+                    shift
+                    ;;
+                exonly)
+                    exonly=1
+                    shift
+                    ;;
+                --)
+                    eoo=1
+                    options+=("$1")
+                    shift
+                    ;;
+                *)
+                    options+=("$1")
+                    shift
+                    ;;
+            esac
+        else
+            options+=("$1")
+            shift
+        fi
     done
+    echo $force
+    exit
+    if [ -e ${TMPD} ]; then
+        rm -rf ${TMPD}
+    fi
     mkdir -p ${TMPD}
-    # Node exporter was missing.
-    node_exporter || error_exit "Failed to install node_exporter"
+
+    compile_cmake || error_exit "Failed to install cmake"
+    if [ $exonly -eq 1 ]; then
+        in_bpfexporter || error_exit "Failed to install bpf exporter"
+        exit
+    else
+        in_bpfexporter || error_exit "Failed to install bpf exporter"
+    fi
+
     if [ $bcc_source -eq 1 ]; then
         in_bcc || error_exit "Failed to install bcc"
+        in_bpftrace || error_exit "Failed to install bpftrace"
     else
         deb_bcc || error_exit "Failed to install bcc from apt"
     fi
-    in_bpftrace || error_exit "Failed to install bpftrace"
+
     in_bpfexporter || error_exit "Failed to install bpf exporter"
 
     if [ $tune -eq 1 ]; then
         # Stub for system tunings to apply
         apply_host_tuning || "Failed to apply host tunables"
     fi
-
+    rm -rf ${TMPD}
 }
 
+# Run things here.
 main "${@}"
