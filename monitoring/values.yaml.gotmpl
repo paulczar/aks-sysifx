@@ -21,7 +21,7 @@ concourse:
 ## Artifact Storage
 
 minio:
-  enabled: true
+  enabled: false
 
 harbor:
   enabled: false
@@ -32,11 +32,11 @@ grafana:
     name: stable
     url: https://kubernetes-charts.storage.googleapis.com
   name: grafana
-  namespace: metrics
+  namespace: monitoring
   chart: stable/grafana
   version: 5.0.5
   values:
-    - grafana-values.yaml.gotmpl
+    - ../grafana-values.yaml.gotmpl
 
 prometheus:
   enabled: true
@@ -44,7 +44,7 @@ prometheus:
     name: stable
     url: https://kubernetes-charts.storage.googleapis.com
   name: prometheus
-  namespace: metrics
+  namespace: monitoring
   chart: stable/prometheus
   version: 11.0.2
   values:
