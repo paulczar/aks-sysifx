@@ -1,0 +1,8 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-dashboards
+data:
+  default:
+{{ (.Files.Glob "dashboards/*.json").AsConfig indent 4 }}
