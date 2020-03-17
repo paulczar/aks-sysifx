@@ -1,3 +1,30 @@
+grafana:
+  enabled: true
+  repository:
+    name: stable
+    url: https://kubernetes-charts.storage.googleapis.com
+  name: grafana
+  namespace: monitoring
+  chart: stable/grafana
+  version: 5.0.5
+  values:
+    - "values/grafana/values.yaml.gotmpl"
+    - '{{ env "ENV_DIR" }}/grafana-values.yaml.gotmpl'
+
+prometheus:
+  enabled: true
+  repository:
+    name: stable
+    url: https://kubernetes-charts.storage.googleapis.com
+  name: prometheus
+  namespace: monitoring
+  chart: stable/prometheus
+  version: 11.0.2
+  values:
+    - values/prometheus/values.yaml.gotmpl
+
+## Disable all the other junk.
+
 ## Cluster Operations
 clusterSystem:
   enabled: false
@@ -25,30 +52,6 @@ minio:
 
 harbor:
   enabled: false
-
-grafana:
-  enabled: true
-  repository:
-    name: stable
-    url: https://kubernetes-charts.storage.googleapis.com
-  name: grafana
-  namespace: monitoring
-  chart: stable/grafana
-  version: 5.0.5
-  values:
-    - ../grafana-values.yaml.gotmpl
-
-prometheus:
-  enabled: true
-  repository:
-    name: stable
-    url: https://kubernetes-charts.storage.googleapis.com
-  name: prometheus
-  namespace: monitoring
-  chart: stable/prometheus
-  version: 11.0.2
-  values:
-    - values/prometheus/values.yaml.gotmpl
 
 loki:
   enabled: false

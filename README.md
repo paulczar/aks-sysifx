@@ -36,7 +36,11 @@ tools.
 Using the platform-operations-on-kubernetes directory:
 
 ```
-. ../envs.sh && ./scripts/check-namespaces.sh -c -d && helmfile apply
+. ../envs.sh
+./scripts/check-namespaces.sh -c -d
+kubectl -n monitoring create configmap custom-dashboards \
+    --from-file=$ENV_DIR/dashboards
+helmfile apply
 ```
 
 This deploys a minimal prometheus / grafana stack along with the node exporter.
